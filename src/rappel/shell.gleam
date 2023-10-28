@@ -1,11 +1,24 @@
 import gleam/dynamic.{Dynamic}
 import gleam/io
 import gleam/erlang/atom.{Atom}
-import gleam/erlang/process.{Pid, Selector}
+import gleam/erlang/process.{Selector, Subject}
 import gleam/function
+import rappel/evaluator
 
 @external(erlang, "io", "setopts")
 fn set_opts(opts: List(#(Atom, Dynamic))) -> any
+
+@external(erlang, "io", "put_chars")
+fn put_chars(chars: String) -> any
+
+@external(erlang, "io", "get_line")
+fn get_line(prompt: String) -> String
+
+const welcome_message = "Welcome to the Gleam shell ✨\n\n"
+
+pub type State {
+  State(eval: Subject(evaluator.Message))
+}
 
 pub fn start() {
   process.start(
@@ -20,14 +33,24 @@ pub fn start() {
           dynamic.from(atom.create_from_string("unicode")),
         ),
       ])
-      loop(selector, Nil)
+      let eval = evaluator.start()
+      put_chars(welcome_message)
+      loop(selector, State(eval))
     },
     True,
   )
 }
 
-fn loop(self: Selector(Dynamic), state: any) -> any {
-  let msg = process.select_forever(self)
-  io.debug(#("got a msg", msg))
+fn loop(self: Selector(Dynamic), state: State) -> any {
+  let msg = get_line("gleam> ")
+  case msg {
+    "import " <> _imports -> process.send(state.eval, evaluator.AddImport(msg))
+    command -> {
+      let resp =
+        process.try_call(state.eval, evaluator.Evaluate(command, _), 5000)
+      io.debug(#("we got somethin!", resp))
+      Nil
+    }
+  }
   loop(self, state)
 }
