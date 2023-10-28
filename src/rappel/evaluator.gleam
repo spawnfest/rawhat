@@ -8,6 +8,7 @@ import gleam/option.{None}
 import gleam/otp/actor
 import gleam/string
 import rappel/generator
+import rappel/environment.{Environment}
 import glance.{
   Definition, Function, Module, Private, Statement, UnexpectedEndOfInput,
 }
@@ -17,25 +18,12 @@ pub type Message {
   AddImport(command: String)
 }
 
-pub type Environment {
-  Environment(import_map: Map(String, String), variables: Map(String, Dynamic))
-}
-
 pub type State {
   State(environment: Environment)
 }
 
-fn new_environment() -> Environment {
-  Environment(import_map: map.new(), variables: map.new())
-}
-
-fn add_import(env: Environment, mapping: #(String, String)) -> Environment {
-  let assert #(label, value) = mapping
-  Environment(..env, import_map: map.insert(env.import_map, label, value))
-}
-
 fn new_state() -> State {
-  State(environment: new_environment())
+  State(environment: environment.new())
 }
 
 import gleam/io
@@ -47,19 +35,14 @@ pub fn start() -> Subject(Message) {
       fn(msg, state) {
         case msg {
           Evaluate(command, caller) -> {
-            let sample =
+            let assert Ok(sample) =
               command
               |> encode
               |> decode
-              |> generator.generate
+              |> generator.generate(state.environment)
               |> io.debug
-            let assert #(_ok, tokens, _any) =
-              scan_string(charlist.from_string(sample <> "."))
-            io.debug(#("got some tokens", tokens))
-            let assert Ok(parse_result) = parse_exprs(tokens)
-            io.debug(#("got a parse result", parse_result))
-            let assert Value(eval_result, _unknown) =
-              eval_exprs(parse_result, [])
+            let eval_result = evaluate(sample.generated)
+            io.debug(#("return shape is", sample.return_shape))
             io.debug(#("eval result!", eval_result))
             process.send(
               caller,
@@ -73,7 +56,7 @@ pub fn start() -> Subject(Message) {
               imports
               |> list.fold(
                 state.environment,
-                fn(env, import_) { add_import(env, import_) },
+                fn(env, import_) { environment.add_import(env, import_) },
               )
             actor.continue(State(environment: new_env))
           }
@@ -99,6 +82,14 @@ fn parse_exprs(tokens: List(Token)) -> Result(ParseResult, Nil)
 
 @external(erlang, "erl_eval", "exprs")
 fn eval_exprs(parsed: ParseResult, unused: List(any)) -> EvalResult(unknown)
+
+pub fn evaluate(code: String) -> Dynamic {
+  let assert #(_ok, tokens, _unknown) =
+    scan_string(charlist.from_string(code <> "."))
+  let assert Ok(parse_result) = parse_exprs(tokens)
+  let assert Value(return, _unknown) = eval_exprs(parse_result, [])
+  return
+}
 
 pub fn encode(code: String) -> Module {
   let assert Ok(mod) = glance.module("fn main() { " <> code <> " }")

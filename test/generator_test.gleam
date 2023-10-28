@@ -1,12 +1,16 @@
 import gleeunit/should
 import rappel/generator
+import rappel/environment
 import rappel/evaluator
 
 fn generate(code: String) -> String {
-  code
-  |> evaluator.encode
-  |> evaluator.decode
-  |> generator.generate
+  let assert Ok(res) =
+    code
+    |> evaluator.encode
+    |> evaluator.decode
+    |> generator.generate(environment.new())
+
+  res.generated
 }
 
 pub fn it_generates_simple_assignment_test() {
