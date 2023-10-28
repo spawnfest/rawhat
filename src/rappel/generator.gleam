@@ -202,8 +202,6 @@ pub fn generate(
   }
 }
 
-import gleam/io
-
 fn generate_expression(
   expr: Expression,
   env: Environment,
