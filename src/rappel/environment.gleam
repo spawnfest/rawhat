@@ -1,5 +1,6 @@
 import gleam/dynamic.{Dynamic}
 import gleam/map.{Map}
+import gleam/result
 
 pub type Environment {
   Environment(import_map: Map(String, String), variables: Map(String, Dynamic))
@@ -20,4 +21,12 @@ pub fn define_variable(
   value: Dynamic,
 ) -> Environment {
   Environment(..env, variables: map.insert(env.variables, label, value))
+}
+
+pub fn get(environment: Environment, label: String) -> Result(Dynamic, Nil) {
+  map.get(environment.variables, label)
+  |> result.lazy_or(fn() {
+    map.get(environment.import_map, label)
+    |> result.map(dynamic.from)
+  })
 }

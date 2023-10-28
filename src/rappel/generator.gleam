@@ -220,7 +220,11 @@ fn generate_expression(
       })
       |> result.map(string.join(_, ",\n"))
     }
-    Variable(name) -> Ok(convert_variable_name(name))
+    Variable(name) -> {
+      environment.get(env, name)
+      |> result.map(string.inspect)
+      |> result.replace_error(UnboundVariable(name))
+    }
     Tuple(expressions) -> {
       use tuple_expressions <- result.try(
         expressions
