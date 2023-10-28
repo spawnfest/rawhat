@@ -3,6 +3,7 @@ import gleam/io
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Selector, Subject}
 import gleam/function
+import gleam/string
 import rappel/evaluator
 
 @external(erlang, "io", "setopts")
@@ -48,8 +49,16 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
     command -> {
       let resp =
         process.try_call(state.eval, evaluator.Evaluate(command, _), 5000)
-      io.debug(#("we got somethin!", resp))
-      Nil
+      case resp {
+        Ok(val) -> {
+          io.debug(val)
+          Nil
+        }
+        Error(reason) -> {
+          io.print("Error: ")
+          io.println(string.inspect(reason))
+        }
+      }
     }
   }
   loop(self, state)

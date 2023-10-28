@@ -44,7 +44,6 @@ pub fn start() -> Subject(Message) {
               |> encode
               |> decode
               |> generator.generate(state.environment)
-              |> io.debug
             let eval_result = evaluate(sample.generated)
             let decoders =
               generator.get_decoders_for_return(sample.return_shape)
@@ -62,12 +61,10 @@ pub fn start() -> Subject(Message) {
                   }
                 },
               )
-            io.debug(#("eval result!", eval_result))
             process.send(
               caller,
               bit_string.from_string(string.inspect(eval_result)),
             )
-            io.debug(#("environment is", new_env))
             actor.continue(State(environment: new_env))
           }
           AddImport(str) -> {
@@ -78,7 +75,6 @@ pub fn start() -> Subject(Message) {
                 state.environment,
                 fn(env, import_) { environment.add_import(env, import_) },
               )
-            io.debug(#("environment is", new_env))
             actor.continue(State(environment: new_env))
           }
         }

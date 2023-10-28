@@ -6,7 +6,7 @@ import gleam/map.{Map}
 import gleam/result
 import rappel/environment.{Environment}
 import glance.{
-  AddFloat, AddInt, And, Assignment, BinaryOperator, Block, Concatenate,
+  AddFloat, AddInt, And, Assignment, BinaryOperator, Block, Call, Concatenate,
   Discarded, DivFloat, DivInt, Eq, Expression, Field, Float, Fn, FnParameter,
   GtEqFloat, GtEqInt, GtFloat, GtInt, Int, Let, LtEqFloat, LtEqInt, LtFloat,
   LtInt, MultFloat, MultInt, Named, NotEq, Or, Pattern, PatternAssignment,
@@ -281,8 +281,19 @@ fn generate_expression(
       use right_expr <- result.try(generate_expression(right, env))
       Ok(left_expr <> operator <> right_expr)
     }
+    Call(call_expression, arguments) -> {
+      use call <- result.try(generate_expression(call_expression, env))
+      use args <- result.try(
+        arguments
+        |> list.try_map(fn(arg) {
+          let assert Field(_label, expression) = arg
+          generate_expression(expression, env)
+        })
+        |> result.map(string.join(_, ", ")),
+      )
+      Ok(call <> "(" <> args <> ")")
+    }
     _ -> {
-      io.println(string.inspect(expr))
       panic as "got an unknown expression"
     }
   }
