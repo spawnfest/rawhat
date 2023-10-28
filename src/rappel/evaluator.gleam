@@ -34,6 +34,10 @@ pub fn start() -> Subject(Message) {
       new_state(),
       fn(msg, state) {
         case msg {
+          Evaluate("\n", caller) -> {
+            process.send(caller, <<>>)
+            actor.continue(state)
+          }
           Evaluate(command, caller) -> {
             let assert Ok(sample) =
               command
@@ -42,13 +46,29 @@ pub fn start() -> Subject(Message) {
               |> generator.generate(state.environment)
               |> io.debug
             let eval_result = evaluate(sample.generated)
-            io.debug(#("return shape is", sample.return_shape))
+            let decoders =
+              generator.get_decoders_for_return(sample.return_shape)
+            let new_env =
+              decoders
+              |> map.to_list
+              |> list.fold(
+                state.environment,
+                fn(env, pair) {
+                  let label = pair.0
+                  let decoder = pair.1
+                  case decoder(eval_result) {
+                    Ok(value) -> environment.define_variable(env, label, value)
+                    _ -> env
+                  }
+                },
+              )
             io.debug(#("eval result!", eval_result))
             process.send(
               caller,
               bit_string.from_string(string.inspect(eval_result)),
             )
-            actor.continue(state)
+            io.debug(#("environment is", new_env))
+            actor.continue(State(environment: new_env))
           }
           AddImport(str) -> {
             let imports = resolve_import(str)
@@ -58,6 +78,7 @@ pub fn start() -> Subject(Message) {
                 state.environment,
                 fn(env, import_) { environment.add_import(env, import_) },
               )
+            io.debug(#("environment is", new_env))
             actor.continue(State(environment: new_env))
           }
         }
@@ -113,7 +134,7 @@ pub fn decode(mod: Module) -> Statement {
 }
 
 pub fn resolve_import(str: String) -> List(#(String, String)) {
-  let assert "import " <> rest = str
+  let assert "import " <> rest = string.trim(str)
   let [import_path, qualified_imports] = case string.split(rest, ".") {
     [import_path] -> [import_path, ""]
     both -> both
@@ -131,6 +152,7 @@ pub fn resolve_import(str: String) -> List(#(String, String)) {
     |> string.drop_right(1)
     |> string.split(",")
     |> list.map(string.trim)
+    |> list.filter(fn(str) { string.is_empty(str) == False })
     |> list.map(fn(qualified) { #(qualified, module_path <> ":" <> qualified) })
   ]
 }

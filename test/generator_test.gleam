@@ -1,5 +1,7 @@
+import gleam/dynamic
+import gleam/map
 import gleeunit/should
-import rappel/generator
+import rappel/generator.{Record2, SingleValue, Tuple2}
 import rappel/environment
 import rappel/evaluator
 
@@ -53,4 +55,70 @@ pub fn it_handles_function_definitions_test() {
 
   result
   |> should.equal("MyFunc = fun(ArgOne, ArgTwo) -> Value = 1\nend")
+}
+
+pub fn it_handles_decoding_single_values_test() {
+  let return_shape = generator.SingleValue("value")
+  let output = generator.get_decoders_for_return(return_shape)
+
+  output
+  |> should.equal(map.from_list([#("value", dynamic.dynamic)]))
+
+  let input = dynamic.from(123)
+  let assert Ok(decoder) = map.get(output, "value")
+
+  decoder(input)
+  |> should.equal(Ok(dynamic.from(123)))
+}
+
+pub fn it_handles_nested_tuple_values_test() {
+  let return_shape =
+    Tuple2(SingleValue("a"), Tuple2(SingleValue("b"), SingleValue("c")))
+
+  let output = generator.get_decoders_for_return(return_shape)
+
+  output
+  |> should.equal(map.from_list([
+    #("a", dynamic.element(0, dynamic.dynamic)),
+    #("b", dynamic.element(1, dynamic.element(0, dynamic.dynamic))),
+    #("c", dynamic.element(1, dynamic.element(1, dynamic.dynamic))),
+  ]))
+
+  let input = dynamic.from(#(1, #(2, 3)))
+  let assert Ok(a_decoder) = map.get(output, "a")
+  let assert Ok(b_decoder) = map.get(output, "b")
+  let assert Ok(c_decoder) = map.get(output, "c")
+
+  a_decoder(input)
+  |> should.equal(Ok(dynamic.from(1)))
+  b_decoder(input)
+  |> should.equal(Ok(dynamic.from(2)))
+  c_decoder(input)
+  |> should.equal(Ok(dynamic.from(3)))
+}
+
+type TestRecord {
+  TestRecord(first: String, second: Bool)
+}
+
+pub fn it_handles_records_test() {
+  let return_shape =
+    Record2("doesn't matter", SingleValue("key_one"), SingleValue("key_two"))
+
+  let output = generator.get_decoders_for_return(return_shape)
+
+  output
+  |> should.equal(map.from_list([
+    #("key_one", dynamic.element(1, dynamic.dynamic)),
+    #("key_two", dynamic.element(2, dynamic.dynamic)),
+  ]))
+
+  let input = dynamic.from(TestRecord("hi mom", False))
+  let assert Ok(key_one) = map.get(output, "key_one")
+  let assert Ok(key_two) = map.get(output, "key_two")
+
+  key_one(input)
+  |> should.equal(Ok(dynamic.from("hi mom")))
+  key_two(input)
+  |> should.equal(Ok(dynamic.from(False)))
 }

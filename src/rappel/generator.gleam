@@ -1,6 +1,8 @@
 import gleam/dynamic.{Decoder, Dynamic}
+import gleam/function
 import gleam/string
 import gleam/list
+import gleam/map.{Map}
 import gleam/result
 import rappel/environment.{Environment}
 import glance.{
@@ -36,6 +38,133 @@ pub type ReturnShape {
   List1(item: ReturnShape)
   List2(item1: ReturnShape, item2: ReturnShape)
   List3(item1: ReturnShape, item2: ReturnShape, item3: ReturnShape)
+}
+
+pub fn get_decoders_for_return(
+  shape: ReturnShape,
+) -> Map(String, Decoder(Dynamic)) {
+  do_get_decoders_for_return(shape, function.identity, map.new())
+}
+
+fn do_get_decoders_for_return(
+  shape: ReturnShape,
+  current_decoder: fn(Decoder(Dynamic)) -> Decoder(Dynamic),
+  decoders: Map(String, Decoder(Dynamic)),
+) -> Map(String, Decoder(Dynamic)) {
+  case shape {
+    NotProvided -> decoders
+    SingleValue(label) ->
+      map.insert(decoders, label, current_decoder(dynamic.dynamic))
+    Tuple2(first, second) -> {
+      let decoders =
+        do_get_decoders_for_return(
+          first,
+          fn(next) { current_decoder(dynamic.element(0, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          second,
+          fn(next) { current_decoder(dynamic.element(1, next)) },
+          decoders,
+        )
+      decoders
+    }
+    Tuple3(first, second, third) -> {
+      let decoders =
+        do_get_decoders_for_return(
+          first,
+          fn(next) { current_decoder(dynamic.element(0, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          second,
+          fn(next) { current_decoder(dynamic.element(1, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          third,
+          fn(next) { current_decoder(dynamic.element(2, next)) },
+          decoders,
+        )
+      decoders
+    }
+    Tuple4(first, second, third, fourth) -> {
+      let decoders =
+        do_get_decoders_for_return(
+          first,
+          fn(next) { current_decoder(dynamic.element(0, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          second,
+          fn(next) { current_decoder(dynamic.element(1, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          third,
+          fn(next) { current_decoder(dynamic.element(2, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          fourth,
+          fn(next) { current_decoder(dynamic.element(3, next)) },
+          decoders,
+        )
+      decoders
+    }
+    Record1(_name, first) -> {
+      do_get_decoders_for_return(
+        first,
+        fn(next) { current_decoder(dynamic.element(1, next)) },
+        decoders,
+      )
+    }
+    Record2(_name, first, second) -> {
+      let decoders =
+        do_get_decoders_for_return(
+          first,
+          fn(next) { current_decoder(dynamic.element(1, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          second,
+          fn(next) { current_decoder(dynamic.element(2, next)) },
+          decoders,
+        )
+      decoders
+    }
+    Record3(_name, first, second, third) -> {
+      let decoders =
+        do_get_decoders_for_return(
+          first,
+          fn(next) { current_decoder(dynamic.element(1, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          second,
+          fn(next) { current_decoder(dynamic.element(2, next)) },
+          decoders,
+        )
+      let decoders =
+        do_get_decoders_for_return(
+          third,
+          fn(next) { current_decoder(dynamic.element(3, next)) },
+          decoders,
+        )
+      decoders
+    }
+    _ -> {
+      todo as "not exactly sure how to do lists with this right now"
+    }
+  }
 }
 
 pub type Error {

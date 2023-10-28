@@ -13,3 +13,11 @@ pub fn add_import(env: Environment, mapping: #(String, String)) -> Environment {
   let assert #(label, value) = mapping
   Environment(..env, import_map: map.insert(env.import_map, label, value))
 }
+
+pub fn define_variable(
+  env: Environment,
+  label: String,
+  value: Dynamic,
+) -> Environment {
+  Environment(..env, variables: map.insert(env.variables, label, value))
+}
