@@ -180,6 +180,14 @@ pub fn did_change(document: String, content: String) -> String {
   |> encode
 }
 
+pub fn exit() -> String {
+  json.object([
+    #("jsonrpc", json.string("2.0")),
+    #("method", json.string("exit")),
+  ])
+  |> encode
+}
+
 pub fn encode(msg: json.Json) -> String {
   let message = json.to_string(msg)
 
@@ -222,10 +230,7 @@ pub fn decode(resp: String) -> Result(Response, Nil) {
         "result",
         dynamic.decode1(
           Hover,
-          dynamic.optional(dynamic.field(
-            "contents",
-            dynamic.string),
-          ),
+          dynamic.optional(dynamic.field("contents", dynamic.string)),
         ),
       ),
     )

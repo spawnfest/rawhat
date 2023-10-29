@@ -34,7 +34,7 @@ pub type State {
   )
 }
 
-pub fn start() {
+pub fn start(cancel: Subject(Nil)) {
   process.start(
     fn() {
       let selector =
@@ -69,14 +69,21 @@ pub fn start() {
           )),
         )
       loop(selector, State(eval, lsp_client, pkg))
+
+      process.send(cancel, Nil)
+      process.kill(process.self())
     },
     True,
   )
 }
 
-fn loop(self: Selector(Dynamic), state: State) -> any {
+fn loop(self: Selector(Dynamic), state: State) -> Nil {
   let msg = get_line("gleam> ")
   case msg {
+    "quit()\n" -> {
+      let assert Ok(_) = process.try_call(state.lsp, lsp.Shutdown, 200)
+      Nil
+    }
     "import " <> _imports -> {
       process.send(state.eval, evaluator.AddImport(msg))
       let new_package = package.add_import(state.package, msg)

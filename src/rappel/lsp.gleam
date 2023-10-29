@@ -1,7 +1,8 @@
 import gleam/dynamic.{Decoder, Dynamic}
 import gleam/erlang/atom.{Atom}
-import gleam/erlang/process.{Subject}
+import gleam/erlang/process.{Pid, Subject}
 import gleam/function
+import gleam/int
 import gleam/list
 import gleam/map.{Map}
 import gleam/option
@@ -9,13 +10,14 @@ import gleam/otp/actor
 import gleam/result
 import gleam/string
 import rappel/lsp/client
+import shellout
 
 pub type Message {
   Request(id: Int, message: String, caller: Subject(String))
   Notify(message: String)
   Response(message: String)
   InvalidResponse(Dynamic)
-  Shutdown
+  Shutdown(done: Subject(Nil))
 }
 
 pub type State {
@@ -28,6 +30,8 @@ pub type State {
     self: Subject(Message),
   )
 }
+
+import gleam/io
 
 pub fn open(temp_dir: String) -> Subject(Message) {
   let spawn = atom.create_from_string("spawn")
@@ -52,12 +56,26 @@ pub fn open(temp_dir: String) -> Subject(Message) {
           )
         let msg = client.initialize()
         port_command(port, msg)
+        let pid = port_pid(port)
+        let assert True = process.link(pid)
 
         actor.Ready(State("", port, False, temp_dir, map.new(), subj), selector)
       },
       init_timeout: 1000,
       loop: fn(msg, state) {
         case msg, state.has_initialized {
+          Shutdown(done), _ -> {
+            // NOTE:  This should do the whole
+            // "shutdown request -> response -> exit" process, but I don't feel
+            // like doing that
+            port_command(state.port, client.exit())
+            let os_pid = port_os_pid(state.port)
+            port_close(state.port)
+            // why won't you DIE
+            let assert Ok(_) = shellout.command("kill", with: ["-9", int.to_string(os_pid)], in: ".", opt: [])
+            process.send(done, Nil)
+            actor.Stop(process.Normal)
+          }
           Request(id, req, caller), True -> {
             port_command(state.port, req)
             let pending = map.insert(state.pending_requests, id, caller)
@@ -162,3 +180,31 @@ fn open_port(command: #(Atom, String), opts: List(Opts)) -> Port
 
 @external(erlang, "erlang", "port_command")
 fn port_command(dest: Port, msg: any) -> Bool
+
+@external(erlang, "erlang", "port_close")
+fn port_close(dest: Port) -> Bool
+
+@external(erlang, "erlang", "port_info")
+fn port_info(dest: Port) -> List(#(Atom, Dynamic))
+
+// NOTE:  don't do this
+fn port_pid(port: Port) -> Pid {
+  let info = port_info(port)
+  let assert Ok(#(_key, value)) = list.find(info, fn(item) {
+    let assert #(key, _value) = item
+    key == atom.create_from_string("links")
+  })
+
+  let assert [link] = dynamic.unsafe_coerce(value)
+  link
+}
+
+fn port_os_pid(port: Port) -> Int {
+  let info = port_info(port)
+  let assert Ok(#(_key, value)) = list.find(info, fn(item) {
+    let assert #(key, _value) = item
+    key == atom.create_from_string("os_pid")
+  })
+
+  dynamic.unsafe_coerce(value)
+}
