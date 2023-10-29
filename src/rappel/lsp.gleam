@@ -122,6 +122,9 @@ pub fn open(temp_dir: String) -> Subject(Message) {
                               |> string.replace("```gleam", "")
                               |> string.replace("```", "")
                               |> string.trim
+                              |> string.split("\n")
+                              |> list.at(0)
+                              |> result.unwrap("")
                             })
                             |> option.unwrap("")
                           process.send(subj, hover_info)

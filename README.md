@@ -11,13 +11,13 @@ You need a relatively recent Gleam version installed (I was using 0.31.0).
 I think it should work with any recent OTP version as well, as I'm using the
 `shell` but nothing explicitly new.
 
-In this directory, just execute `gleam run`.  You can exit with `<Ctrl-C>`.
+In this directory, just execute `gleam run`.  You can exit with `quit()`.
 
-TODO:  Remove this if I fix this
 NOTE:  The project creates a folder in a random directory generated with
-`mktemp`. If you want to clean that up, it's in there somewhere.  Additionally,
-the port for `gleam lsp` doesn't actually shut down the process on exit.  So you
-may need to kill any lingering `gleam lsp` processes.
+`mktemp`. If you want to clean that up, it's in there somewhere. Additionally,
+the `gleam lsp` command really doesn't want to exit sometimes.  I've gone fully
+nuclear in the code to kill it, but it's possible that a process might linger
+after exiting the program.
 
 ### Tests
 
@@ -46,8 +46,6 @@ a response, which should include definitions for your code, it's displayed
 alongside the expression value.
 
 ## What _doesn't_ it do?
-
-TODO:  Make sure to update this if I get some of this stuff working lol
 
 Not all Gleam syntax is supported.  Mostly due to time constraints, but also
 the codegen in the compiler handles things like variable re-binding, unrolling
