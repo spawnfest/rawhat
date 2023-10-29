@@ -19,6 +19,11 @@ NOTE:  The project creates a folder in a random directory generated with
 the port for `gleam lsp` doesn't actually shut down the process on exit.  So you
 may need to kill any lingering `gleam lsp` processes.
 
+### Tests
+
+There are some tests for various bits of the logic strewn about. You can run
+them with a `gleam test`.
+
 ## What does it do?
 
 It supports a small subset of Gleam syntax.  It does some hand-rolled
