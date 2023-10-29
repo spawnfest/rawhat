@@ -51,6 +51,20 @@ Not all Gleam syntax is supported.  Mostly due to time constraints, but also
 the codegen in the compiler handles things like variable re-binding, unrolling
 pipes, etc.  I did not feel like doing any of that for this.
 
+## Future work
+
+I'm not really sure this is "the way forward".  It was a fun exercise, but I
+suspect emitting Erlang code in userland is probably not the way to go?  It
+would be too easy to diverge from how the compiler works.  Also using the LSP
+like this is a bit hacky, but it was fun nonetheless.  It also only works on
+Erlang, but there's also the JavaScript target!
+
+Ultimately, all of your Gleam modules can be made available in the Erlang shell
+via the `-pa` flag (that the `gleam shell` command already uses).  You just
+can't write Gleam code.  And you can load the standard library in the `node`
+shell as well.  So realistically this project doesn't provide too much more
+than you get by default.
+
 ## Implementation
 
 The `rappel/shell` module is the `{module, function, arity}` entrypoint for
