@@ -5,6 +5,8 @@ import gleam/dynamic.{Dynamic}
 import gleam/int
 import gleam/json
 import gleam/map.{Map}
+import gleam/option.{Option}
+import gleam/result
 import gleam/string
 
 // interface Message {
@@ -138,4 +140,32 @@ pub fn encode(msg: json.Json) -> String {
 
   ["Content-Length: " <> int.to_string(content_length), message]
   |> string.join("\r\n\r\n")
+}
+
+pub type Hover {
+  Hover(contents: Option(String))
+}
+
+pub type Response {
+  Response(id: Int, result: Hover)
+}
+
+pub fn decode(resp: String) -> Result(Response, Nil) {
+  let decoder =
+    dynamic.decode2(
+      Response,
+      dynamic.field("id", dynamic.int),
+      dynamic.field(
+        "result",
+        dynamic.decode1(
+          Hover,
+          dynamic.optional(dynamic.field(
+            "contents",
+            dynamic.field("contents", dynamic.string),
+          )),
+        ),
+      ),
+    )
+  json.decode(resp, decoder)
+  |> result.replace_error(Nil)
 }

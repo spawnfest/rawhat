@@ -2,9 +2,14 @@ import gleam/dynamic.{Dynamic}
 import gleam/io
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Selector, Subject}
+import gleam/int
 import gleam/function
 import gleam/string
 import rappel/evaluator
+import rappel/lsp
+import rappel/lsp/client
+import rappel/lsp/package.{Package}
+import shellout
 
 @external(erlang, "io", "setopts")
 fn set_opts(opts: List(#(Atom, Dynamic))) -> any
@@ -18,7 +23,11 @@ fn get_line(prompt: String) -> String
 const welcome_message = "Welcome to the Gleam shell ✨\n\n"
 
 pub type State {
-  State(eval: Subject(evaluator.Message))
+  State(
+    eval: Subject(evaluator.Message),
+    lsp: Subject(lsp.Message),
+    package: Package,
+  )
 }
 
 pub fn start() {
@@ -34,9 +43,17 @@ pub fn start() {
           dynamic.from(atom.create_from_string("unicode")),
         ),
       ])
+
+      let assert Ok(tmpdir) =
+        shellout.command("mktemp", with: ["--directory"], in: ".", opt: [])
+      let tmpdir = string.trim(tmpdir)
+      let pkg = package.new(tmpdir)
+      let assert Ok(_) = package.write(pkg)
+
       let eval = evaluator.start()
+      let client = lsp.open(tmpdir)
       put_chars(welcome_message)
-      loop(selector, State(eval))
+      loop(selector, State(eval, client, pkg))
     },
     True,
   )
@@ -45,21 +62,46 @@ pub fn start() {
 fn loop(self: Selector(Dynamic), state: State) -> any {
   let msg = get_line("gleam> ")
   case msg {
-    "import " <> _imports -> process.send(state.eval, evaluator.AddImport(msg))
+    "import " <> _imports -> {
+      process.send(state.eval, evaluator.AddImport(msg))
+      let new_package = package.add_import(state.package, msg)
+      let assert Ok(_) = package.write(new_package)
+      let new_state = State(..state, package: new_package)
+      loop(self, new_state)
+    }
     command -> {
       let resp =
         process.try_call(state.eval, evaluator.Evaluate(command, _), 5000)
-      case resp {
+      let new_state = case resp {
         Ok(val) -> {
           io.debug(val)
-          Nil
+          let new_package = package.append_code(state.package, command)
+          let assert Ok(_) = package.write(new_package)
+          let index = package.last_line_index(new_package)
+          io.debug(#("issuing hover at", index))
+          let assert Ok(resp) =
+            process.try_call(
+              state.lsp,
+              fn(subj) {
+                let id = int.random(0, 1000)
+                lsp.Request(
+                  id,
+                  client.hover(id, package.source_file(new_package), index),
+                  subj,
+                )
+              },
+              5000,
+            )
+          io.debug(#("we got a resp!", resp))
+          State(..state, package: new_package)
         }
         Error(reason) -> {
           io.print("Error: ")
           io.println(string.inspect(reason))
+          state
         }
       }
+      loop(self, new_state)
     }
   }
-  loop(self, state)
 }
