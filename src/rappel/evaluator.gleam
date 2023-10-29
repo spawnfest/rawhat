@@ -100,10 +100,6 @@ pub fn start() -> Subject(Message) {
   subj
 }
 
-type Token
-
-type ParseResult
-
 type EvalResult {
   Value(Dynamic, BindingStruct)
 }
@@ -169,6 +165,10 @@ pub fn resolve_import(str: String) -> List(#(String, String)) {
     |> list.map(fn(qualified) { #(qualified, module_path <> ":" <> qualified) })
   ]
 }
+
+type Token
+
+type ParseResult
 
 @external(erlang, "rappel_ffi", "scan_string")
 fn scan_string(str: Charlist) -> Result(List(Token), #(Dynamic, Dynamic))

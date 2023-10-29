@@ -461,12 +461,6 @@ fn generate_pattern(pattern: Pattern) -> GenerateResult {
       }
     }
   }
-  // let joined_arguments =
-  //   arguments
-  //   |> list.map(fn(arg) {
-  //   })
-  //   |> string.join(", ")
-  // "{" <> constructor_name <> ", " <> joined_arguments <> "}"
 }
 
 fn generate_fn_parameter(param: FnParameter) -> String {
