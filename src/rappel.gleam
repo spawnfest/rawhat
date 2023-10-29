@@ -1,4 +1,3 @@
-import gleam/dynamic.{Dynamic}
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Subject}
 import gleam/function

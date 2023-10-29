@@ -31,8 +31,6 @@ pub type State {
   )
 }
 
-import gleam/io
-
 pub fn open(temp_dir: String) -> Subject(Message) {
   let spawn = atom.create_from_string("spawn")
   let assert Ok(subj) =
@@ -72,7 +70,13 @@ pub fn open(temp_dir: String) -> Subject(Message) {
             let os_pid = port_os_pid(state.port)
             port_close(state.port)
             // why won't you DIE
-            let assert Ok(_) = shellout.command("kill", with: ["-9", int.to_string(os_pid)], in: ".", opt: [])
+            let assert Ok(_) =
+              shellout.command(
+                "kill",
+                with: ["-9", int.to_string(os_pid)],
+                in: ".",
+                opt: [],
+              )
             process.send(done, Nil)
             actor.Stop(process.Normal)
           }
@@ -190,10 +194,14 @@ fn port_info(dest: Port) -> List(#(Atom, Dynamic))
 // NOTE:  don't do this
 fn port_pid(port: Port) -> Pid {
   let info = port_info(port)
-  let assert Ok(#(_key, value)) = list.find(info, fn(item) {
-    let assert #(key, _value) = item
-    key == atom.create_from_string("links")
-  })
+  let assert Ok(#(_key, value)) =
+    list.find(
+      info,
+      fn(item) {
+        let assert #(key, _value) = item
+        key == atom.create_from_string("links")
+      },
+    )
 
   let assert [link] = dynamic.unsafe_coerce(value)
   link
@@ -201,10 +209,14 @@ fn port_pid(port: Port) -> Pid {
 
 fn port_os_pid(port: Port) -> Int {
   let info = port_info(port)
-  let assert Ok(#(_key, value)) = list.find(info, fn(item) {
-    let assert #(key, _value) = item
-    key == atom.create_from_string("os_pid")
-  })
+  let assert Ok(#(_key, value)) =
+    list.find(
+      info,
+      fn(item) {
+        let assert #(key, _value) = item
+        key == atom.create_from_string("os_pid")
+      },
+    )
 
   dynamic.unsafe_coerce(value)
 }
