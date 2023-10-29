@@ -58,6 +58,7 @@ pub fn start() {
 
       let eval = evaluator.start()
       let lsp_client = lsp.open(tmpdir)
+      let monitor = process.monitor_process(process.subject_owner(lsp_client))
       put_chars(welcome_message)
       let _ =
         process.send(
@@ -92,6 +93,14 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
           io.debug(val)
           let new_package = package.append_code(state.package, command)
           let assert Ok(_) = package.write(new_package)
+          let _ =
+            process.send(
+              state.lsp,
+              lsp.Notify(client.did_change(
+                package.source_file(new_package),
+                package.make_main(new_package),
+              )),
+            )
           let index = package.last_line_index(new_package)
           let assert Ok(resp) =
             process.try_call(

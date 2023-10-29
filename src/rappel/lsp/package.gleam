@@ -66,7 +66,7 @@ pub fn last_line_index(package: Package) -> Int {
     |> string.split("\n")
     |> list.length
 
-  imports + code_lines
+  imports + code_lines - 1
 }
 
 pub fn source_file(package: Package) -> String {

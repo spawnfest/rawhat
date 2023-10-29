@@ -156,16 +156,24 @@ pub fn did_open(document: String, contents: String) -> String {
   |> encode
 }
 
-pub fn did_change(id: Int, document: String, content: String) -> String {
+pub fn did_change(document: String, content: String) -> String {
   json.object([
     #("jsonrpc", json.string("2.0")),
-    #("id", json.int(id)),
     #("method", json.string("textDocument/didChange")),
     #(
       "params",
       json.object([
-        #("textDocument", json.object([#("uri", json.string(document))])),
-        #("contentChanges", json.array([content], json.string)),
+        #(
+          "textDocument",
+          json.object([
+            #("uri", json.string(document)),
+            #("version", json.int(8)),
+          ]),
+        ),
+        #(
+          "contentChanges",
+          json.array([[#("text", json.string(content))]], json.object),
+        ),
       ]),
     ),
   ])
