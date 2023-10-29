@@ -224,8 +224,8 @@ pub fn decode(resp: String) -> Result(Response, Nil) {
           Hover,
           dynamic.optional(dynamic.field(
             "contents",
-            dynamic.field("contents", dynamic.string),
-          )),
+            dynamic.string),
+          ),
         ),
       ),
     )

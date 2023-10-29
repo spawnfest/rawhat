@@ -58,7 +58,6 @@ pub fn append_code(package: Package, code: String) -> Package {
 import gleam/io
 
 pub fn last_line_index(package: Package) -> Int {
-  io.debug(#("getting index for", package))
   let imports = list.length(package.main.imports)
   let code_lines =
     package.main.body

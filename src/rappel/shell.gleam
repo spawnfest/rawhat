@@ -90,7 +90,6 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
         |> result.replace_error("Command took longer than 5s...")
       let new_state = case result.flatten(resp) {
         Ok(val) -> {
-          io.debug(val)
           let new_package = package.append_code(state.package, command)
           let assert Ok(_) = package.write(new_package)
           let _ =
@@ -120,7 +119,11 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
               },
               5000,
             )
-          io.debug(#("we got a hover resp!", resp))
+          let output = case resp {
+            "" -> string.inspect(val)
+            type_ -> string.inspect(val) <> " : " <> type_
+          }
+          io.println(output)
           State(..state, package: new_package)
         }
         Error(reason) -> {

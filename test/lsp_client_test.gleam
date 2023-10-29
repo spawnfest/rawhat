@@ -32,7 +32,7 @@ pub fn it_should_parse_valid_hover_message_test() {
   |> should.equal(Ok(client.Response(
     id: 85,
     result: client.Hover(
-      contents: Some("```gleam\\nInt\\n```\\n")
+      contents: Some("```gleam\nInt\n```\n")
     )
   )))
 }

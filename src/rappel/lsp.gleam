@@ -6,8 +6,9 @@ import gleam/io
 import gleam/list
 import gleam/map.{Map}
 import gleam/option
-import gleam/result
 import gleam/otp/actor
+import gleam/result
+import gleam/string
 import rappel/lsp/client
 
 pub type Message {
@@ -51,7 +52,6 @@ pub fn open(temp_dir: String) -> Subject(Message) {
             [Binary, UseStdio, StderrToStdout, Cd(temp_dir)],
           )
         let msg = client.initialize()
-        io.println(msg)
         port_command(port, msg)
 
         actor.Ready(State("", port, False, temp_dir, map.new(), subj), selector)
@@ -60,7 +60,6 @@ pub fn open(temp_dir: String) -> Subject(Message) {
       loop: fn(msg, state) {
         case msg, state.has_initialized {
           Request(id, req, caller), True -> {
-            io.debug(#("issuing", req))
             port_command(state.port, req)
             let pending = map.insert(state.pending_requests, id, caller)
             actor.continue(State(..state, pending_requests: pending))
@@ -74,20 +73,16 @@ pub fn open(temp_dir: String) -> Subject(Message) {
             actor.continue(state)
           }
           InvalidResponse(err), _ -> {
-            io.debug(#("Got a bad message", err))
             actor.continue(state)
           }
           Response("Hello human!" <> _rest), _has_initialized -> {
             actor.continue(state)
           }
           Response(resp), False -> {
-            io.debug(#("got a response", resp))
-            io.println("sending initialized")
             port_command(state.port, client.initialized())
             actor.continue(State(..state, has_initialized: True))
           }
           Response(resp), True -> {
-            io.debug(#("got a response", resp))
             let #(messages, rest) = get_messages(resp, [])
             // TODO:  refactor?
             let new_state =
@@ -99,10 +94,16 @@ pub fn open(temp_dir: String) -> Subject(Message) {
                     Ok(data) -> {
                       case map.get(state.pending_requests, data.id) {
                         Ok(subj) -> {
-                          process.send(
-                            subj,
-                            option.unwrap(data.result.contents, ""),
-                          )
+                          let hover_info =
+                            data.result.contents
+                            |> option.map(fn(contents) {
+                              contents
+                              |> string.replace("```gleam", "")
+                              |> string.replace("```", "")
+                              |> string.trim
+                            })
+                            |> option.unwrap("")
+                          process.send(subj, hover_info)
                           let new_pending =
                             map.delete(state.pending_requests, data.id)
                           State(..state, pending_requests: new_pending)
