@@ -15,7 +15,6 @@ import glance.{
   PatternTuple, PatternVariable, Pipe, RemainderInt, Statement, String, SubFloat,
   SubInt, Tuple, Use, Variable,
 }
-import gleam/io
 
 pub type ReturnShape {
   NotProvided
@@ -184,7 +183,6 @@ pub fn generate(
   statement: Statement,
   env: Environment,
 ) -> Result(GenerateResult, Error) {
-  io.debug(#("generating statement", statement))
   case statement {
     Use(..) -> {
       panic as "use not supported in shell"
@@ -208,7 +206,6 @@ fn generate_expression(
   expr: Expression,
   env: Environment,
 ) -> Result(String, Error) {
-  io.debug(#("generating expression", expr))
   case expr {
     Int(value) | Float(value) -> Ok(value)
     String(value) -> Ok("\"" <> value <> "\"")

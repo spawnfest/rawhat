@@ -2,7 +2,6 @@ import gleam/dynamic.{Dynamic}
 import gleam/list
 import gleam/map.{Map}
 import gleam/result
-import gleam/string
 
 pub type Environment {
   Environment(
@@ -67,10 +66,7 @@ fn add_binding(
 @external(erlang, "erl_eval", "bindings")
 fn list_bindings(bindings: BindingStruct) -> List(#(Dynamic, Dynamic))
 
-import gleam/io
-
 pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment {
-  io.debug(#("merging", bindings, "into", env.bindings))
   bindings
   |> list_bindings
   |> list.fold(
@@ -81,12 +77,4 @@ pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment 
     },
   )
   |> fn(new_bindings) { set_bindings(env, new_bindings) }
-}
-
-// TODO:  don't duplicate this >:(
-fn convert_variable_name(name: String) -> String {
-  name
-  |> string.split("_")
-  |> list.map(string.capitalise)
-  |> string.join("")
 }

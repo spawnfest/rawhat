@@ -85,7 +85,6 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
           let new_package = package.append_code(state.package, command)
           let assert Ok(_) = package.write(new_package)
           let index = package.last_line_index(new_package)
-          io.debug(#("issuing hover at", index))
           let assert Ok(resp) =
             process.try_call(
               state.lsp,
@@ -99,11 +98,10 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
               },
               5000,
             )
-          io.debug(#("we got a resp!", resp))
+          io.debug(#("we got a hover resp!", resp))
           State(..state, package: new_package)
         }
         Error(reason) -> {
-          io.print("Error: ")
           io.println(string.inspect(reason))
           state
         }

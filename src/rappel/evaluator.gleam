@@ -1,10 +1,9 @@
 import gleam/dynamic.{Dynamic}
-import gleam/erlang/atom.{Atom}
 import gleam/erlang/charlist.{Charlist}
 import gleam/erlang/process.{Subject}
 import gleam/erlang
 import gleam/list
-import gleam/map.{Map}
+import gleam/map
 import gleam/option.{None}
 import gleam/otp/actor
 import gleam/result
@@ -121,14 +120,10 @@ fn eval_exprs(
   bindings: environment.BindingStruct,
 ) -> EvalResult
 
-import gleam/io
-
 pub fn evaluate(
   code: String,
   bindings: BindingStruct,
 ) -> Result(#(Dynamic, BindingStruct), Nil) {
-  io.debug(#("bindings are", bindings))
-  io.println("we evaluating: " <> code)
   use tokens <- result.try(result.replace_error(
     scan_string(charlist.from_string(code <> ".")),
     Nil,
@@ -140,16 +135,6 @@ pub fn evaluate(
   ))
 
   Ok(#(return, new_bindings))
-  // let assert #(_ok, tokens, _unknown) =
-  //   scan_string(charlist.from_string(code <> "."))
-  // io.println("got some tokens")
-  // let assert Ok(parse_result) = parse_exprs(tokens)
-  // io.println("parsing expressions")
-  // io.debug(parse_result)
-  // let assert Value(return, new_bindings) = eval_exprs(parse_result, bindings)
-  // io.debug(#("got some new bindigns", new_bindings))
-  // io.println("got a return value!")
-  // #(return, new_bindings)
 }
 
 pub fn encode(code: String) -> Result(Module, Nil) {
