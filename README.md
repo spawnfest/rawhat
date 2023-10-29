@@ -61,14 +61,15 @@ Erlang, but there's also the JavaScript target!
 
 Ultimately, all of your Gleam modules can be made available in the Erlang shell
 via the `-pa` flag (that the `gleam shell` command already uses).  You just
-can't write Gleam code.  And you can load the standard library in the `node`
-shell as well.  So realistically this project doesn't provide too much more
+can't write Gleam code.  And you can load the standard library and your code in
+the `node` shell as well.  So realistically this project doesn't provide too much more
 than you get by default.
 
 ## Implementation
 
-The `rappel/shell.{start}` function is the `{module, function, arity}` entrypoint for
-`shell:start_interactive/1`.  This starts a process which does the following:
+The `rappel/shell.{start}` function is the `{module, function, arguments}`
+entrypoint for `shell:start_interactive/1`.  This starts a process which does
+the following:
 - generate the temp directory for the shell's Gleam project
 - initialize the `Evaluator` process
 - initialize the `LSP` process
