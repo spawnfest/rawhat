@@ -3,7 +3,7 @@
 `rappel` is a small implementation of some bits of a [Gleam](https://gleam.run)
 shell for the Erlang backend.
 
-TODO:  images / gifs
+![rappel-sample](https://github.com/spawnfest/rawhat/assets/2095509/4d928382-eecd-470a-9b05-ce05c940f274)
 
 ## How to run it?
 
