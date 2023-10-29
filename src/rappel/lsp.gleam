@@ -2,7 +2,6 @@ import gleam/dynamic.{Decoder, Dynamic}
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Subject}
 import gleam/function
-import gleam/io
 import gleam/list
 import gleam/map.{Map}
 import gleam/option
@@ -72,13 +71,13 @@ pub fn open(temp_dir: String) -> Subject(Message) {
             process.send_after(state.self, 200, msg)
             actor.continue(state)
           }
-          InvalidResponse(err), _ -> {
+          InvalidResponse(_err), _ -> {
             actor.continue(state)
           }
           Response("Hello human!" <> _rest), _has_initialized -> {
             actor.continue(state)
           }
-          Response(resp), False -> {
+          Response(_resp), False -> {
             port_command(state.port, client.initialized())
             actor.continue(State(..state, has_initialized: True))
           }

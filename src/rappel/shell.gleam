@@ -58,7 +58,7 @@ pub fn start() {
 
       let eval = evaluator.start()
       let lsp_client = lsp.open(tmpdir)
-      let monitor = process.monitor_process(process.subject_owner(lsp_client))
+      let _monitor = process.monitor_process(process.subject_owner(lsp_client))
       put_chars(welcome_message)
       let _ =
         process.send(
