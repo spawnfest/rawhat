@@ -108,18 +108,6 @@ type EvalResult {
   Value(Dynamic, BindingStruct)
 }
 
-@external(erlang, "rappel_ffi", "scan_string")
-fn scan_string(str: Charlist) -> Result(List(Token), #(Dynamic, Dynamic))
-
-@external(erlang, "erl_parse", "parse_exprs")
-fn parse_exprs(tokens: List(Token)) -> Result(ParseResult, Nil)
-
-@external(erlang, "erl_eval", "exprs")
-fn eval_exprs(
-  parsed: ParseResult,
-  bindings: environment.BindingStruct,
-) -> EvalResult
-
 pub fn evaluate(
   code: String,
   bindings: BindingStruct,
@@ -181,3 +169,15 @@ pub fn resolve_import(str: String) -> List(#(String, String)) {
     |> list.map(fn(qualified) { #(qualified, module_path <> ":" <> qualified) })
   ]
 }
+
+@external(erlang, "rappel_ffi", "scan_string")
+fn scan_string(str: Charlist) -> Result(List(Token), #(Dynamic, Dynamic))
+
+@external(erlang, "erl_parse", "parse_exprs")
+fn parse_exprs(tokens: List(Token)) -> Result(ParseResult, Nil)
+
+@external(erlang, "erl_eval", "exprs")
+fn eval_exprs(
+  parsed: ParseResult,
+  bindings: environment.BindingStruct,
+) -> EvalResult

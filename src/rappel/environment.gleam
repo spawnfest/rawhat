@@ -53,19 +53,6 @@ pub fn resolve_import(
 
 pub type BindingStruct
 
-@external(erlang, "erl_eval", "new_bindings")
-fn new_bindings() -> BindingStruct
-
-@external(erlang, "erl_eval", "add_binding")
-fn add_binding(
-  name: name,
-  value: value,
-  existing: BindingStruct,
-) -> BindingStruct
-
-@external(erlang, "erl_eval", "bindings")
-fn list_bindings(bindings: BindingStruct) -> List(#(Dynamic, Dynamic))
-
 pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment {
   bindings
   |> list_bindings
@@ -78,3 +65,16 @@ pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment 
   )
   |> fn(new_bindings) { set_bindings(env, new_bindings) }
 }
+
+@external(erlang, "erl_eval", "new_bindings")
+fn new_bindings() -> BindingStruct
+
+@external(erlang, "erl_eval", "add_binding")
+fn add_binding(
+  name: name,
+  value: value,
+  existing: BindingStruct,
+) -> BindingStruct
+
+@external(erlang, "erl_eval", "bindings")
+fn list_bindings(bindings: BindingStruct) -> List(#(Dynamic, Dynamic))

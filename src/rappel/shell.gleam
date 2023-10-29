@@ -13,18 +13,6 @@ import rappel/lsp/client
 import rappel/lsp/package.{Package}
 import shellout
 
-@external(erlang, "io", "setopts")
-fn set_opts(opts: List(#(Atom, Dynamic))) -> any
-
-@external(erlang, "io", "put_chars")
-fn put_chars(chars: String) -> any
-
-@external(erlang, "io", "get_line")
-fn get_line(prompt: String) -> String
-
-@external(erlang, "shell", "strings")
-fn shell_strings(toggle: Bool) -> Nil
-
 const welcome_message = "Welcome to the Gleam shell ✨\n\n"
 
 pub type State {
@@ -143,3 +131,15 @@ fn loop(self: Selector(Dynamic), state: State) -> Nil {
     }
   }
 }
+
+@external(erlang, "io", "setopts")
+fn set_opts(opts: List(#(Atom, Dynamic))) -> any
+
+@external(erlang, "io", "put_chars")
+fn put_chars(chars: String) -> any
+
+@external(erlang, "io", "get_line")
+fn get_line(prompt: String) -> String
+
+@external(erlang, "shell", "strings")
+fn shell_strings(toggle: Bool) -> Nil

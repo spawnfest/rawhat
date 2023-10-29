@@ -410,7 +410,7 @@ fn generate_pattern(pattern: Pattern) -> GenerateResult {
       }
     }
     PatternBitString(_segments) -> {
-      todo
+      todo as "this one sounds complicated, so i didn't do it"
     }
     PatternConstructor(_module, constructor, arguments, _with_spread) -> {
       let constructor_name = convert_constructor_name(constructor)

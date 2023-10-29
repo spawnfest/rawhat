@@ -5,12 +5,6 @@ import gleam/function
 type MFA =
   #(Atom, Atom, List(Subject(Nil)))
 
-@external(erlang, "code", "ensure_loaded")
-fn ensure_loaded(module: Atom) -> any
-
-@external(erlang, "shell", "start_interactive")
-fn start_interactive(mfa: MFA) -> any
-
 pub fn main() {
   let subj = process.new_subject()
 
@@ -30,3 +24,9 @@ pub fn main() {
 
   process.select_forever(selector)
 }
+
+@external(erlang, "code", "ensure_loaded")
+fn ensure_loaded(module: Atom) -> any
+
+@external(erlang, "shell", "start_interactive")
+fn start_interactive(mfa: MFA) -> any

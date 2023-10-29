@@ -182,18 +182,6 @@ type Opts {
 
 pub type Port
 
-@external(erlang, "erlang", "open_port")
-fn open_port(command: #(Atom, String), opts: List(Opts)) -> Port
-
-@external(erlang, "erlang", "port_command")
-fn port_command(dest: Port, msg: any) -> Bool
-
-@external(erlang, "erlang", "port_close")
-fn port_close(dest: Port) -> Bool
-
-@external(erlang, "erlang", "port_info")
-fn port_info(dest: Port) -> List(#(Atom, Dynamic))
-
 // NOTE:  don't do this
 fn port_pid(port: Port) -> Pid {
   let info = port_info(port)
@@ -223,3 +211,15 @@ fn port_os_pid(port: Port) -> Int {
 
   dynamic.unsafe_coerce(value)
 }
+
+@external(erlang, "erlang", "open_port")
+fn open_port(command: #(Atom, String), opts: List(Opts)) -> Port
+
+@external(erlang, "erlang", "port_command")
+fn port_command(dest: Port, msg: any) -> Bool
+
+@external(erlang, "erlang", "port_close")
+fn port_close(dest: Port) -> Bool
+
+@external(erlang, "erlang", "port_info")
+fn port_info(dest: Port) -> List(#(Atom, Dynamic))
