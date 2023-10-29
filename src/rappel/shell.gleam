@@ -57,9 +57,17 @@ pub fn start() {
       let assert Ok(_) = package.write(pkg)
 
       let eval = evaluator.start()
-      let client = lsp.open(tmpdir)
+      let lsp_client = lsp.open(tmpdir)
       put_chars(welcome_message)
-      loop(selector, State(eval, client, pkg))
+      let _ =
+        process.send(
+          lsp_client,
+          lsp.Notify(client.did_open(
+            package.source_file(pkg),
+            package.make_main(pkg),
+          )),
+        )
+      loop(selector, State(eval, lsp_client, pkg))
     },
     True,
   )
@@ -92,7 +100,12 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
                 let id = int.random(0, 1000)
                 lsp.Request(
                   id,
-                  client.hover(id, package.source_file(new_package), index),
+                  client.hover(
+                    id,
+                    package.source_file(new_package),
+                    index,
+                    lsp.get_hover_index(command),
+                  ),
                   subj,
                 )
               },

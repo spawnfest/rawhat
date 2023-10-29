@@ -89,11 +89,8 @@ pub fn initialize() -> String {
                 #(
                   "hover",
                   json.object([
-                    #("dynamicRegistration", json.bool(True)),
-                    #(
-                      "contentFormat",
-                      json.array(["plaintext", "markdown"], json.string),
-                    ),
+                    #("dynamicRegistration", json.bool(False)),
+                    #("contentFormat", json.array(["plaintext"], json.string)),
                   ]),
                 ),
               ]),
@@ -115,7 +112,7 @@ pub fn initialized() -> String {
   |> encode
 }
 
-pub fn hover(id: Int, document: String, line_number: Int) -> String {
+pub fn hover(id: Int, document: String, line: Int, column: Int) -> String {
   json.object([
     #("jsonrpc", json.string("2.0")),
     #("id", json.int(id)),
@@ -127,10 +124,48 @@ pub fn hover(id: Int, document: String, line_number: Int) -> String {
         #(
           "position",
           json.object([
-            #("line", json.int(line_number)),
-            #("character", json.int(6)),
+            #("line", json.int(line)),
+            #("character", json.int(column)),
           ]),
         ),
+      ]),
+    ),
+  ])
+  |> encode
+}
+
+pub fn did_open(document: String, contents: String) -> String {
+  json.object([
+    #("jsonrpc", json.string("2.0")),
+    #("method", json.string("textDocument/didOpen")),
+    #(
+      "params",
+      json.object([
+        #(
+          "textDocument",
+          json.object([
+            #("languageId", json.string("gleam")),
+            #("version", json.int(8)),
+            #("text", json.string(contents)),
+            #("uri", json.string(document)),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  |> encode
+}
+
+pub fn did_change(id: Int, document: String, content: String) -> String {
+  json.object([
+    #("jsonrpc", json.string("2.0")),
+    #("id", json.int(id)),
+    #("method", json.string("textDocument/didChange")),
+    #(
+      "params",
+      json.object([
+        #("textDocument", json.object([#("uri", json.string(document))])),
+        #("contentChanges", json.array([content], json.string)),
       ]),
     ),
   ])

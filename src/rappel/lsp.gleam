@@ -12,6 +12,7 @@ import rappel/lsp/client
 
 pub type Message {
   Request(id: Int, message: String, caller: Subject(String))
+  Notify(message: String)
   Response(message: String)
   InvalidResponse(Dynamic)
   Shutdown
@@ -24,6 +25,7 @@ pub type State {
     has_initialized: Bool,
     temp_dir: String,
     pending_requests: Map(Int, Subject(String)),
+    self: Subject(Message),
   )
 }
 
@@ -52,17 +54,24 @@ pub fn open(temp_dir: String) -> Subject(Message) {
         io.println(msg)
         port_command(port, msg)
 
-        actor.Ready(State("", port, False, temp_dir, map.new()), selector)
+        actor.Ready(State("", port, False, temp_dir, map.new(), subj), selector)
       },
       init_timeout: 1000,
       loop: fn(msg, state) {
-        io.debug(#("raw message from port", msg))
         case msg, state.has_initialized {
           Request(id, req, caller), True -> {
             io.debug(#("issuing", req))
             port_command(state.port, req)
             let pending = map.insert(state.pending_requests, id, caller)
             actor.continue(State(..state, pending_requests: pending))
+          }
+          Notify(msg), True -> {
+            port_command(state.port, msg)
+            actor.continue(state)
+          }
+          Notify(_message), False -> {
+            process.send_after(state.self, 200, msg)
+            actor.continue(state)
           }
           InvalidResponse(err), _ -> {
             io.debug(#("Got a bad message", err))
@@ -123,6 +132,13 @@ fn get_messages(resp: String, messages: List(String)) -> #(List(String), String)
     Ok(#(message, "")) -> #([message, ..messages], "")
     Ok(#(message, rest)) -> get_messages(rest, [message, ..messages])
     Error(rest) -> #(messages, rest)
+  }
+}
+
+pub fn get_hover_index(command: String) -> Int {
+  case command {
+    "let " <> _command -> 4
+    _ -> 0
   }
 }
 
