@@ -16,6 +16,7 @@ gleam_otp = "~> 0.7"
 glance = "~> 0.7"
 gleam_json = "~> 0.6"
 shellout = "~> 1.4"
+gleam_community_ansi = "~> 1.1"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"

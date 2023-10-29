@@ -6,6 +6,7 @@ import gleam/int
 import gleam/io
 import gleam/result
 import gleam/string
+import gleam_community/ansi
 import rappel/evaluator
 import rappel/lsp
 import rappel/lsp/client
@@ -78,7 +79,7 @@ pub fn start(cancel: Subject(Nil)) {
 }
 
 fn loop(self: Selector(Dynamic), state: State) -> Nil {
-  let msg = get_line("gleam> ")
+  let msg = get_line(ansi.pink("gleam") <> "> ")
   case msg {
     "quit()\n" -> {
       let assert Ok(_) = process.try_call(state.lsp, lsp.Shutdown, 200)
