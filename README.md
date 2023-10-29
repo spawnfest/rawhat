@@ -67,12 +67,12 @@ than you get by default.
 
 ## Implementation
 
-The `rappel/shell` module is the `{module, function, arity}` entrypoint for
+The `rappel/shell.{start}` function is the `{module, function, arity}` entrypoint for
 `shell:start_interactive/1`.  This starts a process which does the following:
-    - generate the temp directory for the shell's Gleam project
-    - initialize the `Evaluator` process
-    - initialize the `LSP` process
-    - loop to receive user input
+- generate the temp directory for the shell's Gleam project
+- initialize the `Evaluator` process
+- initialize the `LSP` process
+- loop to receive user input
 
 The shell process also handles dispatching messages to the LSP process.
 
@@ -89,10 +89,10 @@ After the Erlang code is generated, it passes through a series of Erlang
 modules that tokenize, parse, and interpret the code to get both the result and
 any variable bindings in the pattern. These bindings are stored in the
 `Environment`. I think that type is largely superfluous now, but the way I
-built up the decoders was cool to me. It uses `erl_scan:string/1`,
+built up the decoders was cool to me so I kept it. It uses `erl_scan:string/1`,
 `erl_parse:parse_exprs/1`, and `erl_eval:exprs/2` to perform these actions.
 
-One the result is obtained from the evaluator, it's returned to the shell. The
+Once the result is obtained from the evaluator, it's returned to the shell. The
 shell module then puts the command into the stub project and issues two LSP
 requests -- one to signify that the document changed, the other to issue the
 `textDocument/hover` request.
