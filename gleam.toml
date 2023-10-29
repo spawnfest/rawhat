@@ -14,6 +14,10 @@ gleam_stdlib = "~> 0.31"
 gleam_erlang = "~> 0.22"
 gleam_otp = "~> 0.7"
 glance = "~> 0.7"
+gleam_json = "~> 0.6"
+simplifile = "~> 0.1"
+shellout = "~> 1.4"
+gleam_crypto = "~> 0.4"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
