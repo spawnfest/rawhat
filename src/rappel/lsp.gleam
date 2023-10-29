@@ -5,10 +5,10 @@ import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Subject}
 import gleam/function
 import gleam/io
+import gleam/list
 import gleam/map.{Map}
 import gleam/option
 import gleam/result
-import gleam/string
 import gleam/otp/actor
 import rappel/lsp/client
 
@@ -21,6 +21,7 @@ pub type Message {
 
 pub type State {
   State(
+    buffer: String,
     port: Port,
     has_initialized: Bool,
     temp_dir: String,
@@ -58,10 +59,14 @@ pub fn open(temp_dir: String) -> Subject(Message) {
 
         io.debug(#("temp dir is", temp_dir, "with filename", filename))
 
-        actor.Ready(State(port, False, temp_dir, filename, map.new()), selector)
+        actor.Ready(
+          State("", port, False, temp_dir, filename, map.new()),
+          selector,
+        )
       },
       init_timeout: 1000,
       loop: fn(msg, state) {
+        io.debug(#("raw message from port", msg))
         case msg, state.has_initialized {
           Request(id, req, caller), True -> {
             io.debug(#("issuing", req))
@@ -84,37 +89,51 @@ pub fn open(temp_dir: String) -> Subject(Message) {
           }
           Response(resp), True -> {
             io.debug(#("got a response", resp))
-            // TODO:  This doesn't always send invidiaul messages (as,
-            // you know... protocols do)
-            let assert [_content_length, message] =
-              string.split(resp, "\r\n\r\n")
-            let _ = case client.decode(message) {
-              Ok(data) -> {
-                io.debug(#("got some valid data", data))
-                case map.get(state.pending_requests, data.id) {
-                  Ok(subj) -> {
-                    process.send(subj, option.unwrap(data.result.contents, ""))
-                    let new_pending =
-                      map.delete(state.pending_requests, data.id)
-                    actor.continue(
-                      State(..state, pending_requests: new_pending),
-                    )
+            let #(messages, rest) = get_messages(resp, [])
+            // TODO:  refactor?
+            let new_state =
+              list.fold(
+                messages,
+                state,
+                fn(state, message) {
+                  case client.decode(message) {
+                    Ok(data) -> {
+                      case map.get(state.pending_requests, data.id) {
+                        Ok(subj) -> {
+                          process.send(
+                            subj,
+                            option.unwrap(data.result.contents, ""),
+                          )
+                          let new_pending =
+                            map.delete(state.pending_requests, data.id)
+                          State(..state, pending_requests: new_pending)
+                        }
+                        _ -> {
+                          state
+                        }
+                      }
+                    }
+                    _ -> {
+                      state
+                    }
                   }
-                  _ -> {
-                    actor.continue(state)
-                  }
-                }
-              }
-              _ -> {
-                actor.continue(state)
-              }
-            }
+                },
+              )
+            actor.continue(State(..new_state, buffer: rest))
           }
         }
       },
     ))
 
   subj
+}
+
+fn get_messages(resp: String, messages: List(String)) -> #(List(String), String) {
+  case client.parse_message(resp) {
+    Ok(#(message, "")) -> #([message, ..messages], "")
+    Ok(#(message, rest)) -> get_messages(rest, [message, ..messages])
+    Error(rest) -> #(messages, rest)
+  }
 }
 
 fn port_message_decoder() -> Decoder(String) {

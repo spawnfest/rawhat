@@ -89,7 +89,11 @@ pub fn initialize() -> String {
                 #(
                   "hover",
                   json.object([
-                    #("contentFormat", json.array(["plaintext"], json.string)),
+                    #("dynamicRegistration", json.bool(True)),
+                    #(
+                      "contentFormat",
+                      json.array(["plaintext", "markdown"], json.string),
+                    ),
                   ]),
                 ),
               ]),
@@ -124,7 +128,7 @@ pub fn hover(id: Int, document: String, line_number: Int) -> String {
           "position",
           json.object([
             #("line", json.int(line_number)),
-            #("character", json.int(5)),
+            #("character", json.int(6)),
           ]),
         ),
       ]),
@@ -148,6 +152,22 @@ pub type Hover {
 
 pub type Response {
   Response(id: Int, result: Hover)
+}
+
+pub fn parse_message(resp: String) -> Result(#(String, String), String) {
+  case resp {
+    "Content-Length: " <> rest -> {
+      use #(length, rest) <- result.try(result.replace_error(
+        string.split_once(rest, "\r\n\r\n"),
+        resp,
+      ))
+      use length <- result.try(result.replace_error(int.parse(length), resp))
+      let message = string.slice(rest, 0, length)
+      let rest = string.slice(rest, length, string.length(rest))
+      Ok(#(message, rest))
+    }
+    _ -> Error(resp)
+  }
 }
 
 pub fn decode(resp: String) -> Result(Response, Nil) {

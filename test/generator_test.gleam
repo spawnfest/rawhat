@@ -2,7 +2,7 @@ import gleam/dynamic
 import gleam/map
 import gleeunit/should
 import rappel/generator.{Record2, SingleValue, Tuple2}
-import rappel/environment
+import rappel/environment.{Environment}
 import rappel/evaluator
 
 fn generate(code: String) -> String {

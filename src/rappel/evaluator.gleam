@@ -1,4 +1,3 @@
-import gleam/bit_string
 import gleam/dynamic.{Dynamic}
 import gleam/erlang/charlist.{Charlist}
 import gleam/erlang/process.{Subject}
@@ -8,13 +7,13 @@ import gleam/option.{None}
 import gleam/otp/actor
 import gleam/string
 import rappel/generator
-import rappel/environment.{Environment}
+import rappel/environment.{BindingStruct, Environment}
 import glance.{
   Definition, Function, Module, Private, Statement, UnexpectedEndOfInput,
 }
 
 pub type Message {
-  Evaluate(command: String, caller: Subject(BitString))
+  Evaluate(command: String, caller: Subject(Dynamic))
   AddImport(command: String)
 }
 
@@ -26,8 +25,6 @@ fn new_state() -> State {
   State(environment: environment.new())
 }
 
-import gleam/io
-
 pub fn start() -> Subject(Message) {
   let assert Ok(subj) =
     actor.start(
@@ -35,7 +32,7 @@ pub fn start() -> Subject(Message) {
       fn(msg, state) {
         case msg {
           Evaluate("\n", caller) -> {
-            process.send(caller, <<>>)
+            process.send(caller, dynamic.from(Nil))
             actor.continue(state)
           }
           Evaluate(command, caller) -> {
@@ -44,7 +41,9 @@ pub fn start() -> Subject(Message) {
               |> encode
               |> decode
               |> generator.generate(state.environment)
-            let eval_result = evaluate(sample.generated)
+            let #(eval_result, bindings) =
+              evaluate(sample.generated, state.environment.bindings)
+            // TODO: :( do i need to do this?
             let decoders =
               generator.get_decoders_for_return(sample.return_shape)
             let new_env =
@@ -61,10 +60,8 @@ pub fn start() -> Subject(Message) {
                   }
                 },
               )
-            process.send(
-              caller,
-              bit_string.from_string(string.inspect(eval_result)),
-            )
+            let new_env = environment.merge_bindings(new_env, bindings)
+            process.send(caller, eval_result)
             actor.continue(State(environment: new_env))
           }
           AddImport(str) -> {
@@ -87,8 +84,8 @@ type Token
 
 type ParseResult
 
-type EvalResult(unknown) {
-  Value(Dynamic, unknown)
+type EvalResult {
+  Value(Dynamic, BindingStruct)
 }
 
 @external(erlang, "erl_scan", "string")
@@ -98,14 +95,20 @@ fn scan_string(str: Charlist) -> #(ok, List(Token), unknown)
 fn parse_exprs(tokens: List(Token)) -> Result(ParseResult, Nil)
 
 @external(erlang, "erl_eval", "exprs")
-fn eval_exprs(parsed: ParseResult, unused: List(any)) -> EvalResult(unknown)
+fn eval_exprs(
+  parsed: ParseResult,
+  bindings: environment.BindingStruct,
+) -> EvalResult
 
-pub fn evaluate(code: String) -> Dynamic {
+pub fn evaluate(
+  code: String,
+  bindings: BindingStruct,
+) -> #(Dynamic, BindingStruct) {
   let assert #(_ok, tokens, _unknown) =
     scan_string(charlist.from_string(code <> "."))
   let assert Ok(parse_result) = parse_exprs(tokens)
-  let assert Value(return, _unknown) = eval_exprs(parse_result, [])
-  return
+  let assert Value(return, new_bindings) = eval_exprs(parse_result, bindings)
+  #(return, new_bindings)
 }
 
 pub fn encode(code: String) -> Module {

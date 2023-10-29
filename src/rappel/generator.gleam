@@ -218,11 +218,7 @@ fn generate_expression(
       })
       |> result.map(string.join(_, ",\n"))
     }
-    Variable(name) -> {
-      environment.get(env, name)
-      |> result.map(string.inspect)
-      |> result.replace_error(UnboundVariable(name))
-    }
+    Variable(name) -> Ok(convert_variable_name(name))
     Tuple(expressions) -> {
       use tuple_expressions <- result.try(
         expressions
@@ -473,7 +469,7 @@ fn generate_fn_parameter(param: FnParameter) -> String {
 }
 
 // some_other_value -> SomeOtherValue
-fn convert_variable_name(name: String) -> String {
+pub fn convert_variable_name(name: String) -> String {
   name
   |> string.split("_")
   |> list.map(string.capitalise)

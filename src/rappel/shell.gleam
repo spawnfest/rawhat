@@ -20,6 +20,9 @@ fn put_chars(chars: String) -> any
 @external(erlang, "io", "get_line")
 fn get_line(prompt: String) -> String
 
+@external(erlang, "shell", "strings")
+fn shell_strings(toggle: Bool) -> Nil
+
 const welcome_message = "Welcome to the Gleam shell ✨\n\n"
 
 pub type State {
@@ -43,6 +46,8 @@ pub fn start() {
           dynamic.from(atom.create_from_string("unicode")),
         ),
       ])
+
+      shell_strings(True)
 
       let assert Ok(tmpdir) =
         shellout.command("mktemp", with: ["--directory"], in: ".", opt: [])
