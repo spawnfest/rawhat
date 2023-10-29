@@ -1,5 +1,3 @@
-import gleam/base
-import gleam/crypto
 import gleam/dynamic.{Decoder, Dynamic}
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Subject}
@@ -25,7 +23,6 @@ pub type State {
     port: Port,
     has_initialized: Bool,
     temp_dir: String,
-    file_name: String,
     pending_requests: Map(Int, Subject(String)),
   )
 }
@@ -54,15 +51,8 @@ pub fn open(temp_dir: String) -> Subject(Message) {
         let msg = client.initialize()
         io.println(msg)
         port_command(port, msg)
-        let filename =
-          "rappel_" <> base.encode64(crypto.strong_random_bytes(12), False) <> ".gleam"
 
-        io.debug(#("temp dir is", temp_dir, "with filename", filename))
-
-        actor.Ready(
-          State("", port, False, temp_dir, filename, map.new()),
-          selector,
-        )
+        actor.Ready(State("", port, False, temp_dir, map.new()), selector)
       },
       init_timeout: 1000,
       loop: fn(msg, state) {

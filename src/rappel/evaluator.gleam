@@ -100,14 +100,23 @@ fn eval_exprs(
   bindings: environment.BindingStruct,
 ) -> EvalResult
 
+import gleam/io
+
 pub fn evaluate(
   code: String,
   bindings: BindingStruct,
 ) -> #(Dynamic, BindingStruct) {
+  io.debug(#("bindings are", bindings))
+  io.println("we evaluating: " <> code)
   let assert #(_ok, tokens, _unknown) =
     scan_string(charlist.from_string(code <> "."))
+  io.println("got some tokens")
   let assert Ok(parse_result) = parse_exprs(tokens)
+  io.println("parsing expressions")
+  io.debug(parse_result)
   let assert Value(return, new_bindings) = eval_exprs(parse_result, bindings)
+  io.debug(#("got some new bindigns", new_bindings))
+  io.println("got a return value!")
   #(return, new_bindings)
 }
 

@@ -17,7 +17,6 @@ glance = "~> 0.7"
 gleam_json = "~> 0.6"
 simplifile = "~> 0.1"
 shellout = "~> 1.4"
-gleam_crypto = "~> 0.4"
 gloml = "~> 0.1"
 
 [dev-dependencies]

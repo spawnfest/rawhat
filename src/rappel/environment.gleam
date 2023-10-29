@@ -30,11 +30,7 @@ pub fn define_variable(
   label: String,
   value: Dynamic,
 ) -> Environment {
-  Environment(
-    ..env,
-    variables: map.insert(env.variables, label, value),
-    bindings: add_binding(convert_variable_name(label), value, env.bindings),
-  )
+  Environment(..env, variables: map.insert(env.variables, label, value))
 }
 
 pub fn set_bindings(env: Environment, bindings: BindingStruct) -> Environment {
@@ -47,6 +43,13 @@ pub fn get(environment: Environment, label: String) -> Result(Dynamic, Nil) {
     map.get(environment.import_map, label)
     |> result.map(dynamic.from)
   })
+}
+
+pub fn resolve_import(
+  environment: Environment,
+  label: String,
+) -> Result(String, Nil) {
+  map.get(environment.import_map, label)
 }
 
 pub type BindingStruct
@@ -64,7 +67,10 @@ fn add_binding(
 @external(erlang, "erl_eval", "bindings")
 fn list_bindings(bindings: BindingStruct) -> List(#(Dynamic, Dynamic))
 
+import gleam/io
+
 pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment {
+  io.debug(#("merging", bindings, "into", env.bindings))
   bindings
   |> list_bindings
   |> list.fold(

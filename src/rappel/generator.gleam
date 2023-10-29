@@ -7,14 +7,15 @@ import gleam/result
 import rappel/environment.{Environment}
 import glance.{
   AddFloat, AddInt, And, Assignment, BinaryOperator, Block, Call, Concatenate,
-  Discarded, DivFloat, DivInt, Eq, Expression, Field, Float, Fn, FnParameter,
-  GtEqFloat, GtEqInt, GtFloat, GtInt, Int, Let, LtEqFloat, LtEqInt, LtFloat,
-  LtInt, MultFloat, MultInt, Named, NotEq, Or, Pattern, PatternAssignment,
-  PatternBitString, PatternConcatenate, PatternConstructor, PatternDiscard,
-  PatternFloat, PatternInt, PatternList, PatternString, PatternTuple,
-  PatternVariable, Pipe, RemainderInt, Statement, String, SubFloat, SubInt,
-  Tuple, Use, Variable,
+  Discarded, DivFloat, DivInt, Eq, Expression, Field, FieldAccess, Float, Fn,
+  FnParameter, GtEqFloat, GtEqInt, GtFloat, GtInt, Int, Let, LtEqFloat, LtEqInt,
+  LtFloat, LtInt, MultFloat, MultInt, Named, NotEq, Or, Pattern,
+  PatternAssignment, PatternBitString, PatternConcatenate, PatternConstructor,
+  PatternDiscard, PatternFloat, PatternInt, PatternList, PatternString,
+  PatternTuple, PatternVariable, Pipe, RemainderInt, Statement, String, SubFloat,
+  SubInt, Tuple, Use, Variable,
 }
+import gleam/io
 
 pub type ReturnShape {
   NotProvided
@@ -183,6 +184,7 @@ pub fn generate(
   statement: Statement,
   env: Environment,
 ) -> Result(GenerateResult, Error) {
+  io.debug(#("generating statement", statement))
   case statement {
     Use(..) -> {
       panic as "use not supported in shell"
@@ -206,6 +208,7 @@ fn generate_expression(
   expr: Expression,
   env: Environment,
 ) -> Result(String, Error) {
+  io.debug(#("generating expression", expr))
   case expr {
     Int(value) | Float(value) -> Ok(value)
     String(value) -> Ok("\"" <> value <> "\"")
@@ -218,7 +221,12 @@ fn generate_expression(
       })
       |> result.map(string.join(_, ",\n"))
     }
-    Variable(name) -> Ok(convert_variable_name(name))
+    Variable(name) -> {
+      environment.resolve_import(env, name)
+      |> result.map_error(fn(_nil) { convert_variable_name(name) })
+      |> result.unwrap_both
+      |> Ok
+    }
     Tuple(expressions) -> {
       use tuple_expressions <- result.try(
         expressions
@@ -286,6 +294,10 @@ fn generate_expression(
         |> result.map(string.join(_, ", ")),
       )
       Ok(call <> "(" <> args <> ")")
+    }
+    FieldAccess(expression, field) -> {
+      use expr <- result.try(generate_expression(expression, env))
+      Ok(expr <> ":" <> field)
     }
     _ -> {
       panic as "got an unknown expression"

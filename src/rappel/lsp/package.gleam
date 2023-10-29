@@ -26,7 +26,10 @@ pub type Package {
 pub fn new(directory: String) -> Package {
   Package(
     name: "rappel",
-    dependencies: [],
+    dependencies: [
+      Hex("gleam_stdlib", "~> 0.31"),
+      Hex("gleam_erlang", "~> 0.22"),
+    ],
     main: Module(imports: [], body: string_builder.new()),
     directory: directory,
   )
@@ -89,7 +92,7 @@ pub fn make_toml(package: Package) -> String {
       package.dependencies,
       fn(dependency) {
         case dependency {
-          Hex(name, version) -> name <> " = " <> version
+          Hex(name, version) -> name <> " = \"" <> version <> "\""
           Path(name, path) -> name <> " = { path = \"" <> path <> "\" }"
         }
       },
