@@ -1,16 +1,20 @@
 import gleam/dynamic
 import gleam/map
+import gleam/result
 import gleeunit/should
-import rappel/generator.{Record2, SingleValue, Tuple2}
-import rappel/environment.{Environment}
+import rappel/environment
 import rappel/evaluator
+import rappel/generator.{Record2, SingleValue, Tuple2}
 
 fn generate(code: String) -> String {
   let assert Ok(res) =
     code
     |> evaluator.encode
-    |> evaluator.decode
-    |> generator.generate(environment.new())
+    |> result.map(evaluator.decode)
+    |> result.then(fn(code) {
+      generator.generate(code, environment.new())
+      |> result.replace_error(Nil)
+    })
 
   res.generated
 }

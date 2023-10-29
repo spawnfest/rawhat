@@ -1,9 +1,10 @@
 import gleam/dynamic.{Dynamic}
-import gleam/io
 import gleam/erlang/atom.{Atom}
 import gleam/erlang/process.{Selector, Subject}
-import gleam/int
 import gleam/function
+import gleam/int
+import gleam/io
+import gleam/result
 import gleam/string
 import rappel/evaluator
 import rappel/lsp
@@ -77,7 +78,8 @@ fn loop(self: Selector(Dynamic), state: State) -> any {
     command -> {
       let resp =
         process.try_call(state.eval, evaluator.Evaluate(command, _), 5000)
-      let new_state = case resp {
+        |> result.replace_error("Command took longer than 5s...")
+      let new_state = case result.flatten(resp) {
         Ok(val) -> {
           io.debug(val)
           let new_package = package.append_code(state.package, command)

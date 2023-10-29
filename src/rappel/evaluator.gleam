@@ -1,10 +1,13 @@
 import gleam/dynamic.{Dynamic}
+import gleam/erlang/atom.{Atom}
 import gleam/erlang/charlist.{Charlist}
 import gleam/erlang/process.{Subject}
+import gleam/erlang
 import gleam/list
 import gleam/map.{Map}
 import gleam/option.{None}
 import gleam/otp/actor
+import gleam/result
 import gleam/string
 import rappel/generator
 import rappel/environment.{BindingStruct, Environment}
@@ -13,7 +16,7 @@ import glance.{
 }
 
 pub type Message {
-  Evaluate(command: String, caller: Subject(Dynamic))
+  Evaluate(command: String, caller: Subject(Result(Dynamic, String)))
   AddImport(command: String)
 }
 
@@ -32,37 +35,55 @@ pub fn start() -> Subject(Message) {
       fn(msg, state) {
         case msg {
           Evaluate("\n", caller) -> {
-            process.send(caller, dynamic.from(Nil))
+            process.send(caller, Ok(dynamic.from(Nil)))
             actor.continue(state)
           }
           Evaluate(command, caller) -> {
-            let assert Ok(sample) =
-              command
-              |> encode
-              |> decode
-              |> generator.generate(state.environment)
-            let #(eval_result, bindings) =
-              evaluate(sample.generated, state.environment.bindings)
-            // TODO: :( do i need to do this?
-            let decoders =
-              generator.get_decoders_for_return(sample.return_shape)
-            let new_env =
-              decoders
-              |> map.to_list
-              |> list.fold(
-                state.environment,
-                fn(env, pair) {
-                  let label = pair.0
-                  let decoder = pair.1
-                  case decoder(eval_result) {
-                    Ok(value) -> environment.define_variable(env, label, value)
-                    _ -> env
-                  }
-                },
+            command
+            |> encode
+            |> result.map(decode)
+            |> result.then(fn(code) {
+              generator.generate(code, state.environment)
+              |> result.replace_error(Nil)
+            })
+            |> result.then(fn(sample) {
+              case evaluate(sample.generated, state.environment.bindings) {
+                Ok(pair) -> Ok(#(sample, pair))
+                Error(reason) -> Error(reason)
+              }
+            })
+            |> result.map(fn(res) {
+              let assert #(sample, #(eval_result, bindings)) = res
+              // TODO: :( do i need to do this?
+              let decoders =
+                generator.get_decoders_for_return(sample.return_shape)
+              let new_env =
+                decoders
+                |> map.to_list
+                |> list.fold(
+                  state.environment,
+                  fn(env, pair) {
+                    let label = pair.0
+                    let decoder = pair.1
+                    case decoder(eval_result) {
+                      Ok(value) ->
+                        environment.define_variable(env, label, value)
+                      _ -> env
+                    }
+                  },
+                )
+              let new_env = environment.merge_bindings(new_env, bindings)
+              process.send(caller, Ok(eval_result))
+              actor.continue(State(environment: new_env))
+            })
+            |> result.map_error(fn(_nil) {
+              process.send(
+                caller,
+                Error("Invalid syntax or failed to execute."),
               )
-            let new_env = environment.merge_bindings(new_env, bindings)
-            process.send(caller, eval_result)
-            actor.continue(State(environment: new_env))
+              actor.continue(state)
+            })
+            |> result.unwrap_both
           }
           AddImport(str) -> {
             let imports = resolve_import(str)
@@ -88,8 +109,8 @@ type EvalResult {
   Value(Dynamic, BindingStruct)
 }
 
-@external(erlang, "erl_scan", "string")
-fn scan_string(str: Charlist) -> #(ok, List(Token), unknown)
+@external(erlang, "rappel_ffi", "scan_string")
+fn scan_string(str: Charlist) -> Result(List(Token), #(Dynamic, Dynamic))
 
 @external(erlang, "erl_parse", "parse_exprs")
 fn parse_exprs(tokens: List(Token)) -> Result(ParseResult, Nil)
@@ -105,24 +126,35 @@ import gleam/io
 pub fn evaluate(
   code: String,
   bindings: BindingStruct,
-) -> #(Dynamic, BindingStruct) {
+) -> Result(#(Dynamic, BindingStruct), Nil) {
   io.debug(#("bindings are", bindings))
   io.println("we evaluating: " <> code)
-  let assert #(_ok, tokens, _unknown) =
-    scan_string(charlist.from_string(code <> "."))
-  io.println("got some tokens")
-  let assert Ok(parse_result) = parse_exprs(tokens)
-  io.println("parsing expressions")
-  io.debug(parse_result)
-  let assert Value(return, new_bindings) = eval_exprs(parse_result, bindings)
-  io.debug(#("got some new bindigns", new_bindings))
-  io.println("got a return value!")
-  #(return, new_bindings)
+  use tokens <- result.try(result.replace_error(
+    scan_string(charlist.from_string(code <> ".")),
+    Nil,
+  ))
+  use parse_result <- result.try(parse_exprs(tokens))
+  use Value(return, new_bindings) <- result.try(result.replace_error(
+    erlang.rescue(fn() { eval_exprs(parse_result, bindings) }),
+    Nil,
+  ))
+
+  Ok(#(return, new_bindings))
+  // let assert #(_ok, tokens, _unknown) =
+  //   scan_string(charlist.from_string(code <> "."))
+  // io.println("got some tokens")
+  // let assert Ok(parse_result) = parse_exprs(tokens)
+  // io.println("parsing expressions")
+  // io.debug(parse_result)
+  // let assert Value(return, new_bindings) = eval_exprs(parse_result, bindings)
+  // io.debug(#("got some new bindigns", new_bindings))
+  // io.println("got a return value!")
+  // #(return, new_bindings)
 }
 
-pub fn encode(code: String) -> Module {
-  let assert Ok(mod) = glance.module("fn main() { " <> code <> " }")
-  mod
+pub fn encode(code: String) -> Result(Module, Nil) {
+  glance.module("fn main() { " <> code <> " }")
+  |> result.replace_error(Nil)
 }
 
 pub fn decode(mod: Module) -> Statement {
@@ -154,7 +186,7 @@ pub fn resolve_import(str: String) -> List(#(String, String)) {
   let assert Ok(module_name) = list.last(module_segments)
 
   [
-    #(module_name, module_path),
+    #(module_name, string.trim(module_path)),
     ..qualified_imports
     |> string.drop_left(1)
     |> string.drop_right(1)

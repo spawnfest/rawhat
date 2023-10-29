@@ -38,7 +38,10 @@ pub fn new(directory: String) -> Package {
 pub fn add_import(package: Package, import_: String) -> Package {
   Package(
     ..package,
-    main: Module(..package.main, imports: [import_, ..package.main.imports]),
+    main: Module(
+      ..package.main,
+      imports: [string.trim(import_), ..package.main.imports],
+    ),
   )
 }
 
@@ -59,7 +62,7 @@ pub fn last_line_index(package: Package) -> Int {
     |> string_builder.split("\n")
     |> list.length
 
-  imports + code_lines - 1
+  imports + code_lines
 }
 
 pub fn source_file(package: Package) -> String {
