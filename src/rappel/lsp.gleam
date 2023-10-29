@@ -180,8 +180,6 @@ type Opts {
   StderrToStdout
 }
 
-pub type Port
-
 // NOTE:  don't do this
 fn port_pid(port: Port) -> Pid {
   let info = port_info(port)
@@ -211,6 +209,8 @@ fn port_os_pid(port: Port) -> Int {
 
   dynamic.unsafe_coerce(value)
 }
+
+pub type Port
 
 @external(erlang, "erlang", "open_port")
 fn open_port(command: #(Atom, String), opts: List(Opts)) -> Port

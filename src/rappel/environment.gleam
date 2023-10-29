@@ -51,8 +51,6 @@ pub fn resolve_import(
   map.get(environment.import_map, label)
 }
 
-pub type BindingStruct
-
 pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment {
   bindings
   |> list_bindings
@@ -65,6 +63,8 @@ pub fn merge_bindings(env: Environment, bindings: BindingStruct) -> Environment 
   )
   |> fn(new_bindings) { set_bindings(env, new_bindings) }
 }
+
+pub type BindingStruct
 
 @external(erlang, "erl_eval", "new_bindings")
 fn new_bindings() -> BindingStruct
